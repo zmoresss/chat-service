@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Test Chat</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
+    <script src="http://localhost:9000/socket.io/socket.io.js"></script>
+    <script>
+        jQuery(document).ready(function() {
+            // const urlParams = new URLSearchParams(window.location.search);
+            // const token = urlParams.get('token');
+            //
+            // const socket = io(`http://localhost:9000?token=${token}`);
+
+            const socket = io('http://localhost:9000');
+
+            socket.on("connect_error", (err) => {
+                console.log(`connect_error due to ${err.message}`);
+            });
+
+            const listOfEvents = ['TestMeeting-02r05q-TestMeeting'];
+            const eventName = listOfEvents[Math.floor(Math.random()*listOfEvents.length)];
+
+            var form = jQuery('#myForm');
+            var txt = jQuery('#txt');
+            var name = jQuery('#txtName');
+            var chatArea = jQuery('#chatArea');
+
+            chatArea.append('<div>'+eventName+'</div>');
+
+            form.submit(function(e) {
+                e.preventDefault();
+                const message = {
+                    event_name: eventName,
+                    from: name.val(),
+                    body: txt.val()
+                };
+
+                socket.emit('cs:message:send', message);
+                txt.val('');
+            })
+
+            socket.on('handshake:success', function(data){
+                console.log(`Successfully joined to group chat (${data.group_chat}).`);
+                socket.emit('cs:connect:join', {
+                    event_name: eventName,
+                });
+            });
+
+            socket.on('sc:connect:join_success', function(data){
+                console.log(`Successfully joined to group chat (${data.group_chat}).`);
+            });
+
+            socket.on('receive:all', function(data){
+                console.log('Message received = ', data);
+                const message = data.body;
+                const from = data.from;
+
+                const displayMessage = from == name.val()
+                    ? `Me: ${message}`
+                    : `${from}: ${message}`;
+
+                chatArea.append('<div class="well">'+displayMessage+'</div>');
+            });
+        });
+    </script>
+</head>
+<body>
+<div class="container">
+    <h1>Test Chat</h1>
+    <div class="row" style="margin-top: 70px;">
+        <div class="col-md-4"></div>
+        <div class="col-md-6">
+            <div id="groupName"></div>
+            <div id="chatArea">
+            </div>
+            <form id="myForm">
+                <div class="form-group">
+                    <input type="text" id="txtName" cols="5" class="form-control"/>
+                </div>
+                <div class="form-group">
+                    <textarea rows="5" id="txt" cols="5" class="form-control"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
